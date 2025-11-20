@@ -5,6 +5,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import os
 
 # Télécharger la derniere vesion du dataset
@@ -38,13 +41,13 @@ x_train, x_test, y_train, y_test = train_test_split(x, y,test_size=0.2)
 
 
 
-#Debut du pre-traitements des donnees (preprocessing)
+# Debut du pre-traitements des donnees (preprocessing)
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(x_train)
 X_test_scaled = scaler.transform(x_test)
 
 
-# Note : Le résultat est un array Numpy. Pour le remettre en DataFrame (optionnel pour la visibilité) :
+# Le résultat est un array Numpy. Pour le remettre en DataFrame (optionnel pour la visibilité) :
 X_train_scaled_df = pd.DataFrame(X_train_scaled, columns=x.columns)
 X_test_scaled_df = pd.DataFrame(X_test_scaled, columns=x.columns)
 
@@ -79,9 +82,64 @@ def show_heatmap(df: pd.DataFrame):
 show_heatmap(X_train_scaled_df)
 
 # Suppression des features inutiles (qui ont trop de correlation avec d'autres)
-features_a_supprimer = ['loudness']
+features_a_supprimer = []
 
-
-# 2. Création du dataset propre
+# Création du dataset propre
 X_train_scaled_clean_df = X_train_scaled_df.drop(features_a_supprimer, axis=1)
 X_test_scaled_clean_df = X_test_scaled_df.drop(features_a_supprimer, axis=1)
+
+print("Features conservées :", X_train_scaled_clean_df.columns.tolist())
+
+# Initialisation du modèle
+# max_iter=1000 permet de laisser plus de temps au modèle pour trouver la solution mathématique
+model_lr = LogisticRegression(random_state=42, max_iter=1000)
+# n_estimators=100 : On crée 100 arbres de décision
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+
+
+# Entraînement (Fit) sur les données d'entraînement
+print("Entraînement en cours...")
+model_lr.fit(X_train_scaled_clean_df, y_train)
+print("Entraînement 1/2")
+rf_model.fit(X_train_scaled_clean_df, y_train)
+
+# Prédiction sur les données de test (jamais vues par le modèle)
+y_pred_lr = model_lr.predict(X_test_scaled_clean_df)
+y_pred_rf = rf_model.predict(X_test_scaled_clean_df)
+
+
+# Calcul du score global (Accuracy)
+accuracy_lr = accuracy_score(y_test, y_pred_lr)
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+
+print(f"✅ Précision globale LR : {accuracy_lr:.2%}")
+print(f"✅ Précision globale RF : {accuracy_rf:.2%}")
+
+
+# Affiche les métriques détaillées par Mood
+print("\n--- Rapport de Classification ---")
+print(classification_report(y_test, y_pred_lr))
+print(classification_report(y_test, y_pred_rf))
+
+# Visualisation de la Matrice de Confusion
+
+def showHeatmapConfusion(y_test,y_pred,nameModel:str):
+    plt.figure(figsize=(8, 6))
+    conf_matrix = confusion_matrix(y_test, y_pred)
+
+    _=sns.heatmap(conf_matrix, 
+                annot=True,         # Affiche les nombres
+                fmt='d',            # Format 'd' pour des entiers (pas de notation scientifique)
+                cmap='Blues',       # Bleu pour rester lisible
+                xticklabels=model_lr.classes_, # Noms des moods en bas
+                yticklabels=model_lr.classes_) # Noms des moods à gauche
+
+    plt.title('Matrice de Confusion '+nameModel)
+    plt.xlabel('Mood Prédit')
+    plt.ylabel('Vrai Mood')
+    plt.show()
+    
+showHeatmapConfusion(y_test,y_pred_lr,"Logistic Regression")
+showHeatmapConfusion(y_test,y_pred_rf,"Random Forest")
+
