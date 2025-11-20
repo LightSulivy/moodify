@@ -143,3 +143,20 @@ def showHeatmapConfusion(y_test,y_pred,nameModel:str):
 showHeatmapConfusion(y_test,y_pred_lr,"Logistic Regression")
 showHeatmapConfusion(y_test,y_pred_rf,"Random Forest")
 
+
+# --- BONUS : VISUALISER L'IMPORTANCE DES FEATURES ---
+
+# Création d'un petit DataFrame pour lier le nom des colonnes à leur score d'importance
+feature_importances = pd.DataFrame({
+    'feature': X_train_scaled_clean_df.columns,
+    'importance': rf_model.feature_importances_
+}).sort_values(by='importance', ascending=False)
+
+# Affichage graphique
+plt.figure(figsize=(10, 6))
+sns.barplot(x='importance', y='feature', data=feature_importances, palette='viridis')
+plt.title('Quelles features définissent le plus le Mood ?')
+plt.xlabel("Importance (Poids dans la décision)")
+plt.ylabel("Features")
+plt.show()
+
