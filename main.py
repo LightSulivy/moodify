@@ -1,6 +1,8 @@
 import kagglehub
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import os
@@ -44,5 +46,42 @@ X_test_scaled = scaler.transform(x_test)
 
 # Note : Le résultat est un array Numpy. Pour le remettre en DataFrame (optionnel pour la visibilité) :
 X_train_scaled_df = pd.DataFrame(X_train_scaled, columns=x.columns)
+X_test_scaled_df = pd.DataFrame(X_test_scaled, columns=x.columns)
 
 print(X_train_scaled_df.head())
+
+
+def show_heatmap(df: pd.DataFrame):
+    corr_matrix = df.corr()
+
+    # 2. Création d'un masque pour cacher la moitié supérieure (redondante)
+    mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+
+    # 3. Configuration de la taille de la figure
+    plt.figure(figsize=(10, 7))
+
+    # 4. Affichage de la Heatmap
+    _ = sns.heatmap(corr_matrix, 
+                #mask=mask,            # Applique le masque triangulaire
+                cmap='coolwarm',      # Palette de couleurs : Bleu (négatif) -> Rouge (positif)
+                vmax=1,               # Valeur max de l'échelle
+                center=0,             # Centre de l'échelle (blanc/neutre)
+                square=True,          # Force les cellules à être carrées
+                linewidths=.5,        # Lignes blanches entre les cases pour la lisibilité
+                annot=True,           # Affiche les chiffres dans les cases
+                fmt=".2f")            # Formate les chiffres (2 décimales)
+
+    plt.title('Matrice de Corrélation des Features Audio', fontsize=15)
+    plt.show()
+    
+
+
+show_heatmap(X_train_scaled_df)
+
+# Suppression des features inutiles (qui ont trop de correlation avec d'autres)
+features_a_supprimer = ['loudness']
+
+
+# 2. Création du dataset propre
+X_train_scaled_clean_df = X_train_scaled_df.drop(features_a_supprimer, axis=1)
+X_test_scaled_clean_df = X_test_scaled_df.drop(features_a_supprimer, axis=1)
