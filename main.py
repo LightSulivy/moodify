@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -159,4 +159,19 @@ plt.title('Quelles features définissent le plus le Mood ?')
 plt.xlabel("Importance (Poids dans la décision)")
 plt.ylabel("Features")
 plt.show()
+
+
+user_input = input("Voulez-vous lancer la validation croisée ? (yes/no) : ").strip().lower()
+
+if user_input == "yes":
+    # Concatenation des données pour la validation croisée
+    X_full = pd.concat([X_train_scaled_clean_df, X_test_scaled_clean_df], axis=0)
+    y_full = pd.concat([pd.Series(y_train), pd.Series(y_test)], axis=0)
+
+    # Lancement de la validation croisée
+    scores = cross_val_score(rf_model, X_full, y_full, cv=5)
+    print(f"Scores des 5 tests : {scores}")
+    print(f"✅ Moyenne réelle : {scores.mean():.2%} (+/- {scores.std():.2%})")
+else:
+    print("Validation croisée annulée.")
 
