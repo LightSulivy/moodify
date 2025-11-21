@@ -1,14 +1,27 @@
-import kagglehub
+import kagglehub  # type: ignore
 import pandas as pd
-import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV  # type: ignore
+from sklearn.preprocessing import StandardScaler  # type: ignore
+from sklearn.linear_model import LogisticRegression  # type: ignore
+from sklearn.ensemble import RandomForestClassifier  # type: ignore
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix  # type: ignore
 import os
+
+"""
+1. Nettoyé les données (StandardScaler).
+
+2. Analysé les corrélations (Heatmap) et fait des choix métier (spec_rate).
+
+3. Établi une baseline (Logistic Regression ~84%).
+
+4. Challenge avec un modèle complexe (Random Forest ~94.3%).
+
+5. Optimisé le tout (GridSearchCV ~94.55%)
+
+"""
+
 
 # Télécharger la derniere vesion du dataset
 path = kagglehub.dataset_download("abdullahorzan/moodify-dataset")
@@ -16,9 +29,8 @@ path = kagglehub.dataset_download("abdullahorzan/moodify-dataset")
 print("Path to dataset files:", path)
 
 # Trouver et le dataset csv
-csv_files = [f for f in os.listdir(path) if f.endswith('.csv')]
+csv_files = [f for f in os.listdir(path) if f.endswith(".csv")]
 
-df = pd.DataFrame()
 if csv_files:
     # Le charger en le convertissant en DataFrame
     csv_file_path = os.path.join(path, csv_files[0])
@@ -30,15 +42,14 @@ else:
 
 
 # Separer les features et les valeurs objectifs
-x = df.drop(columns=['labels',"Unnamed: 0"])
+x = df.drop(columns=["labels", "Unnamed: 0"])
 y = df["labels"]
 
 print(x.head())
 print(y.head())
 
 # Diviser le dataset en donnee d'entrainement et donnee de test
-x_train, x_test, y_train, y_test = train_test_split(x, y,test_size=0.2)
-
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 
 
 # Debut du pre-traitements des donnees (preprocessing)
@@ -58,25 +69,26 @@ def show_heatmap(df: pd.DataFrame):
     corr_matrix = df.corr()
 
     # 2. Création d'un masque pour cacher la moitié supérieure (redondante)
-    mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
+    # mask = np.triu(np.ones_like(corr_matrix, dtype=bool)) # Unused variable
 
     # 3. Configuration de la taille de la figure
-    plt.figure(figsize=(10, 7))
+    _ = plt.figure(figsize=(10, 7))
 
     # 4. Affichage de la Heatmap
-    _ = sns.heatmap(corr_matrix, 
-                #mask=mask,            # Applique le masque triangulaire
-                cmap='coolwarm',      # Palette de couleurs : Bleu (négatif) -> Rouge (positif)
-                vmax=1,               # Valeur max de l'échelle
-                center=0,             # Centre de l'échelle (blanc/neutre)
-                square=True,          # Force les cellules à être carrées
-                linewidths=.5,        # Lignes blanches entre les cases pour la lisibilité
-                annot=True,           # Affiche les chiffres dans les cases
-                fmt=".2f")            # Formate les chiffres (2 décimales)
+    _ = sns.heatmap(
+        corr_matrix,
+        # mask=mask,            # Applique le masque triangulaire
+        cmap="coolwarm",  # Palette de couleurs : Bleu (négatif) -> Rouge (positif)
+        vmax=1,  # Valeur max de l'échelle
+        center=0,  # Centre de l'échelle (blanc/neutre)
+        square=True,  # Force les cellules à être carrées
+        linewidths=0.5,  # Lignes blanches entre les cases pour la lisibilité
+        annot=True,  # Affiche les chiffres dans les cases
+        fmt=".2f",
+    )  # Formate les chiffres (2 décimales)
 
-    plt.title('Matrice de Corrélation des Features Audio', fontsize=15)
+    _ = plt.title("Matrice de Corrélation des Features Audio", fontsize=15)
     plt.show()
-    
 
 
 show_heatmap(X_train_scaled_df)
@@ -94,8 +106,14 @@ print("Features conservées :", X_train_scaled_clean_df.columns.tolist())
 # max_iter=1000 permet de laisser plus de temps au modèle pour trouver la solution mathématique
 model_lr = LogisticRegression(random_state=42, max_iter=1000)
 # n_estimators=100 : On crée 100 arbres de décision
-rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
-
+rf_model = RandomForestClassifier(
+    n_estimators=300,
+    random_state=42,
+    n_jobs=-1,
+    criterion="entropy",
+    max_depth=None,
+    min_samples_leaf=1,
+)
 
 
 # Entraînement (Fit) sur les données d'entraînement
@@ -124,46 +142,62 @@ print(classification_report(y_test, y_pred_rf))
 
 # Visualisation de la Matrice de Confusion
 
-def showHeatmapConfusion(y_test,y_pred,nameModel:str):
-    plt.figure(figsize=(8, 6))
+
+def showHeatmapConfusion(y_test, y_pred, nameModel: str, model):
+    _ = plt.figure(figsize=(8, 6))
     conf_matrix = confusion_matrix(y_test, y_pred)
 
-    _=sns.heatmap(conf_matrix, 
-                annot=True,         # Affiche les nombres
-                fmt='d',            # Format 'd' pour des entiers (pas de notation scientifique)
-                cmap='Blues',       # Bleu pour rester lisible
-                xticklabels=model_lr.classes_, # Noms des moods en bas
-                yticklabels=model_lr.classes_) # Noms des moods à gauche
+    _ = sns.heatmap(
+        conf_matrix,
+        annot=True,  # Affiche les nombres
+        fmt="d",  # Format 'd' pour des entiers (pas de notation scientifique)
+        cmap="Blues",  # Bleu pour rester lisible
+        xticklabels=model.classes_,  # Noms des moods en bas
+        yticklabels=model.classes_,
+    )  # Noms des moods à gauche
 
-    plt.title('Matrice de Confusion '+nameModel)
-    plt.xlabel('Mood Prédit')
-    plt.ylabel('Vrai Mood')
+    _ = plt.title("Matrice de Confusion " + nameModel)
+    _ = plt.xlabel("Mood Prédit")
+    _ = plt.ylabel("Vrai Mood")
     plt.show()
-    
-showHeatmapConfusion(y_test,y_pred_lr,"Logistic Regression")
-showHeatmapConfusion(y_test,y_pred_rf,"Random Forest")
+
+
+showHeatmapConfusion(y_test, y_pred_lr, "Logistic Regression", model_lr)
+showHeatmapConfusion(y_test, y_pred_rf, "Random Forest", rf_model)
 
 
 # --- BONUS : VISUALISER L'IMPORTANCE DES FEATURES ---
 
 # Création d'un petit DataFrame pour lier le nom des colonnes à leur score d'importance
-feature_importances = pd.DataFrame({
-    'feature': X_train_scaled_clean_df.columns,
-    'importance': rf_model.feature_importances_
-}).sort_values(by='importance', ascending=False)
+feature_importances = pd.DataFrame(
+    {
+        "feature": X_train_scaled_clean_df.columns,
+        "importance": rf_model.feature_importances_,
+    }
+).sort_values(by="importance", ascending=False)
 
 # Affichage graphique
-plt.figure(figsize=(10, 6))
-sns.barplot(x='importance', y='feature', data=feature_importances, palette='viridis')
-plt.title('Quelles features définissent le plus le Mood ?')
-plt.xlabel("Importance (Poids dans la décision)")
-plt.ylabel("Features")
+_ = plt.figure(figsize=(10, 6))
+_ = sns.barplot(
+    x="importance",
+    y="feature",
+    data=feature_importances,
+    hue="feature",
+    legend=False,
+    palette="viridis",
+)
+_ = plt.title("Quelles features définissent le plus le Mood ?")
+_ = plt.xlabel("Importance (Poids dans la décision)")
+_ = plt.ylabel("Features")
 plt.show()
 
 
-user_input = input("Voulez-vous lancer la validation croisée ? (yes/no) : ").strip().lower()
+user_input = (
+    input("Voulez-vous lancer la cross validation ? (yes/no) : ").strip().lower()
+)
 
 if user_input == "yes":
+    print("Début de la cross validation")
     # Concatenation des données pour la validation croisée
     X_full = pd.concat([X_train_scaled_clean_df, X_test_scaled_clean_df], axis=0)
     y_full = pd.concat([pd.Series(y_train), pd.Series(y_test)], axis=0)
@@ -175,3 +209,55 @@ if user_input == "yes":
 else:
     print("Validation croisée annulée.")
 
+
+user_input = (
+    input(
+        "Voulez-vous lancer le grid search ? \n /!\\ Warning cela peut prendre plusieurs dizaines de minutes voir plusieurs heures\n(yes/no) : "
+    )
+    .strip()
+    .lower()
+)
+
+if user_input == "yes":
+    # 1. Définition de la grille de paramètres à tester
+    # On teste des variations autour des valeurs par défaut
+    param_grid = {
+        "n_estimators": [
+            100,
+            200,
+            300,
+        ],  # Plus d'arbres = souvent mieux, mais plus lent
+        "max_depth": [None, 15, 25],  # Limiter la profondeur évite le surapprentissage
+        "min_samples_leaf": [1, 2, 4],  # Nombre min d'exemples pour valider une feuille
+        "criterion": [
+            "gini",
+            "entropy",
+        ],  # La formule mathématique pour diviser les nœuds
+    }
+    # 2. Configuration du GridSearch
+    # cv=5 : On continue de faire de la validation croisée (5 tests par combinaison)
+    # n_jobs=-1 : Utilise tous les cœurs de ton processeur pour aller plus vite
+    grid_search = GridSearchCV(
+        estimator=rf_model,
+        param_grid=param_grid,
+        cv=5,
+        n_jobs=-1,
+        verbose=2,
+        scoring="accuracy",
+    )
+
+    # 3. Lancement de la recherche (peut prendre 1 à 3 minutes selon ton PC)
+    print("🕵️ Recherche des meilleurs hyperparamètres en cours...")
+    grid_search.fit(X_train_scaled_clean_df, y_train)
+
+    # 4. Résultats
+    print(f"\n🏆 Meilleur score trouvé : {grid_search.best_score_:.2%}")
+    print("⚙️ Meilleurs paramètres :", grid_search.best_params_)
+
+    # 5. Mise à jour de ton modèle avec le vainqueur
+    best_rf = grid_search.best_estimator_
+
+    # 🏆 Meilleur score trouvé : 94.42%
+    # ⚙️ Meilleurs paramètres : {'criterion': 'entropy', 'max_depth': None, 'min_samples_leaf': 1, 'n_estimators': 300}
+else:
+    print("Cross validation annulée.")
