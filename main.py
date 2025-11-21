@@ -1,12 +1,12 @@
-import kagglehub  # type: ignore
+import kagglehub
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV  # type: ignore
-from sklearn.preprocessing import StandardScaler  # type: ignore
-from sklearn.linear_model import LogisticRegression  # type: ignore
-from sklearn.ensemble import RandomForestClassifier  # type: ignore
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix  # type: ignore
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import os
 
 """
@@ -68,13 +68,10 @@ print(X_train_scaled_df.head())
 def show_heatmap(df: pd.DataFrame):
     corr_matrix = df.corr()
 
-    # 2. Création d'un masque pour cacher la moitié supérieure (redondante)
-    # mask = np.triu(np.ones_like(corr_matrix, dtype=bool)) # Unused variable
-
-    # 3. Configuration de la taille de la figure
+    # Configuration de la taille de la figure
     _ = plt.figure(figsize=(10, 7))
 
-    # 4. Affichage de la Heatmap
+    # Affichage de la Heatmap
     _ = sns.heatmap(
         corr_matrix,
         # mask=mask,            # Applique le masque triangulaire
@@ -165,8 +162,6 @@ def showHeatmapConfusion(y_test, y_pred, nameModel: str, model):
 showHeatmapConfusion(y_test, y_pred_lr, "Logistic Regression", model_lr)
 showHeatmapConfusion(y_test, y_pred_rf, "Random Forest", rf_model)
 
-
-# --- BONUS : VISUALISER L'IMPORTANCE DES FEATURES ---
 
 # Création d'un petit DataFrame pour lier le nom des colonnes à leur score d'importance
 feature_importances = pd.DataFrame(
