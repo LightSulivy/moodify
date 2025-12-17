@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
+from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import os
 
@@ -59,7 +61,7 @@ def analyze_outliers(df):
     sns.boxplot(data=df_numeric)
     plt.xticks(rotation=90)
     plt.title("Distribution des features et Outliers")
-    plt.show()
+    # plt.show()
 
     # Comptage des outliers (Méthode IQR)
     Q1 = df_numeric.quantile(0.25)
@@ -111,7 +113,7 @@ def show_heatmap(df: pd.DataFrame):
     )  # Formate les chiffres (2 décimales)
 
     _ = plt.title("Matrice de Corrélation des Features Audio", fontsize=15)
-    plt.show()
+    # plt.show()
 
 
 show_heatmap(X_train_scaled_df)
@@ -137,31 +139,51 @@ rf_model = RandomForestClassifier(
     max_depth=None,
     min_samples_leaf=1,
 )
+# Modèle SVM (Linear Support Vector Machine - plus rapide)
+svm_model = LinearSVC(dual=False, random_state=42)
+
+# Modèle Gradient Boosting (HistGradientBoosting - optimisé pour grands datasets)
+gb_model = HistGradientBoostingClassifier(random_state=42)
 
 
 # Entraînement (Fit) sur les données d'entraînement
-print("Entraînement en cours...")
+print("Entraînement 1/4")
 model_lr.fit(X_train_scaled_clean_df, y_train)
-print("Entraînement 1/2")
+print("Entraînement 2/4")
 rf_model.fit(X_train_scaled_clean_df, y_train)
+print("Entraînement 3/4")
+svm_model.fit(X_train_scaled_clean_df, y_train)
+print("Entraînement 4/4")
+gb_model.fit(X_train_scaled_clean_df, y_train)
 
 # Prédiction sur les données de test (jamais vues par le modèle)
 y_pred_lr = model_lr.predict(X_test_scaled_clean_df)
 y_pred_rf = rf_model.predict(X_test_scaled_clean_df)
+y_pred_svm = svm_model.predict(X_test_scaled_clean_df)
+y_pred_gb = gb_model.predict(X_test_scaled_clean_df)
 
 
 # Calcul du score global (Accuracy)
 accuracy_lr = accuracy_score(y_test, y_pred_lr)
 accuracy_rf = accuracy_score(y_test, y_pred_rf)
+accuracy_svm = accuracy_score(y_test, y_pred_svm)
+accuracy_gb = accuracy_score(y_test, y_pred_gb)
 
 print(f"✅ Précision globale LR : {accuracy_lr:.2%}")
 print(f"✅ Précision globale RF : {accuracy_rf:.2%}")
+print(f"✅ Précision globale SVM : {accuracy_svm:.2%}")
+print(f"✅ Précision globale GB : {accuracy_gb:.2%}")
 
 
 # Affiche les métriques détaillées par Mood
 print("\n--- Rapport de Classification ---")
 print(classification_report(y_test, y_pred_lr))
+print("\n--- Random Forest ---")
 print(classification_report(y_test, y_pred_rf))
+print("\n--- SVM ---")
+print(classification_report(y_test, y_pred_svm))
+print("\n--- Gradient Boosting ---")
+print(classification_report(y_test, y_pred_gb))
 
 # Visualisation de la Matrice de Confusion
 
@@ -182,11 +204,13 @@ def showHeatmapConfusion(y_test, y_pred, nameModel: str, model):
     _ = plt.title("Matrice de Confusion " + nameModel)
     _ = plt.xlabel("Mood Prédit")
     _ = plt.ylabel("Vrai Mood")
-    plt.show()
+    # plt.show()
 
 
 showHeatmapConfusion(y_test, y_pred_lr, "Logistic Regression", model_lr)
 showHeatmapConfusion(y_test, y_pred_rf, "Random Forest", rf_model)
+showHeatmapConfusion(y_test, y_pred_svm, "SVM", svm_model)
+showHeatmapConfusion(y_test, y_pred_gb, "Gradient Boosting", gb_model)
 
 
 # Création d'un petit DataFrame pour lier le nom des colonnes à leur score d'importance
@@ -210,7 +234,7 @@ _ = sns.barplot(
 _ = plt.title("Quelles features définissent le plus le Mood ?")
 _ = plt.xlabel("Importance (Poids dans la décision)")
 _ = plt.ylabel("Features")
-plt.show()
+# plt.show()
 
 
 user_input = (
