@@ -48,6 +48,32 @@ y = df["labels"]
 print(x.head())
 print(y.head())
 
+
+def analyze_outliers(df):
+    # Sélectionner uniquement les colonnes numériques
+    numeric_cols = df.select_dtypes(include=["float64", "int64"]).columns
+    df_numeric = df[numeric_cols]
+
+    # Visualisation avec Boxplot
+    plt.figure(figsize=(15, 8))
+    sns.boxplot(data=df_numeric)
+    plt.xticks(rotation=90)
+    plt.title("Distribution des features et Outliers")
+    plt.show()
+
+    # Comptage des outliers (Méthode IQR)
+    Q1 = df_numeric.quantile(0.25)
+    Q3 = df_numeric.quantile(0.75)
+    IQR = Q3 - Q1
+    outliers = ((df_numeric < (Q1 - 1.5 * IQR)) | (df_numeric > (Q3 + 1.5 * IQR))).sum()
+
+    print("\n--- Nombre d'outliers détectés par feature ---")
+    print(outliers[outliers > 0])
+
+
+analyze_outliers(x)
+
+
 # Diviser le dataset en donnee d'entrainement et donnee de test
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 
