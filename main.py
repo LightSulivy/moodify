@@ -9,6 +9,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, HistGradientBoostingClassifier
 from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.inspection import permutation_importance
 import os
 
 """
@@ -44,7 +45,7 @@ else:
 
 
 # Separer les features et les valeurs objectifs
-x = df.drop(columns=["labels", "Unnamed: 0", "Unnamed 0.1", "uri"])
+x = df.drop(columns=["labels", "Unnamed: 0"])
 y = df["labels"]
 
 print(x.head())
@@ -61,7 +62,7 @@ def analyze_outliers(df):
     sns.boxplot(data=df_numeric)
     plt.xticks(rotation=90)
     plt.title("Distribution des features et Outliers")
-    # plt.show()
+    plt.show()
 
     # Comptage des outliers (Méthode IQR)
     Q1 = df_numeric.quantile(0.25)
@@ -113,7 +114,7 @@ def show_heatmap(df: pd.DataFrame):
     )  # Formate les chiffres (2 décimales)
 
     _ = plt.title("Matrice de Corrélation des Features Audio", fontsize=15)
-    # plt.show()
+    plt.show()
 
 
 show_heatmap(X_train_scaled_df)
@@ -204,7 +205,7 @@ def showHeatmapConfusion(y_test, y_pred, nameModel: str, model):
     _ = plt.title("Matrice de Confusion " + nameModel)
     _ = plt.xlabel("Mood Prédit")
     _ = plt.ylabel("Vrai Mood")
-    # plt.show()
+    plt.show()
 
 
 showHeatmapConfusion(y_test, y_pred_lr, "Logistic Regression", model_lr)
@@ -213,28 +214,48 @@ showHeatmapConfusion(y_test, y_pred_svm, "SVM", svm_model)
 showHeatmapConfusion(y_test, y_pred_gb, "Gradient Boosting", gb_model)
 
 
-# Création d'un petit DataFrame pour lier le nom des colonnes à leur score d'importance
-feature_importances = pd.DataFrame(
+# --- Comparaison de l'importance des Features ---
+
+# 1. Importance pour Random Forest (Gini importance - Built-in)
+rf_importances = rf_model.feature_importances_
+
+# 2. Importance pour Gradient Boosting (Permutation Importance)
+# HistGradientBoosting n'a pas de feature_importances_ natif, on calcule l'impact de mélanger chaque colonne
+print(
+    "Calcul de l'importance des features pour Gradient Boosting (cela peut prendre quelques secondes)..."
+)
+result_gb = permutation_importance(
+    gb_model, X_test_scaled_clean_df, y_test, n_repeats=5, random_state=42, n_jobs=-1
+)
+gb_importances = result_gb.importances_mean
+
+# Normalisation pour rendre les échelles comparables (somme = 1)
+rf_importances_norm = rf_importances / rf_importances.sum()
+gb_importances_norm = gb_importances / gb_importances.sum()
+
+# Création d'un DataFrame combiné pour l'affichage
+features = X_train_scaled_clean_df.columns.tolist()
+df_importance = pd.DataFrame(
     {
-        "feature": X_train_scaled_clean_df.columns,
-        "importance": rf_model.feature_importances_,
+        "Feature": features * 2,
+        "Importance": list(rf_importances_norm) + list(gb_importances_norm),
+        "Modèle": ["Random Forest"] * len(features)
+        + ["Gradient Boosting"] * len(features),
     }
-).sort_values(by="importance", ascending=False)
+)
 
 # Affichage graphique
-_ = plt.figure(figsize=(10, 6))
-_ = sns.barplot(
-    x="importance",
-    y="feature",
-    data=feature_importances,
-    hue="feature",
-    legend=False,
-    palette="viridis",
+plt.figure(figsize=(12, 8))
+sns.barplot(
+    x="Importance", y="Feature", hue="Modèle", data=df_importance, palette="viridis"
 )
-_ = plt.title("Quelles features définissent le plus le Mood ?")
-_ = plt.xlabel("Importance (Poids dans la décision)")
-_ = plt.ylabel("Features")
-# plt.show()
+plt.title(
+    "Comparaison de l'importance des Features : Random Forest vs Gradient Boosting (Normalisé)"
+)
+plt.xlabel("Importance Relative (Normalisée)")
+plt.ylabel("Features")
+plt.legend(title="Modèle")
+plt.show()
 
 
 user_input = (
