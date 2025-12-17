@@ -44,7 +44,7 @@ else:
 
 
 # Separer les features et les valeurs objectifs
-x = df.drop(columns=["labels", "Unnamed: 0"])
+x = df.drop(columns=["labels", "Unnamed: 0", "Unnamed 0.1", "uri"])
 y = df["labels"]
 
 print(x.head())
